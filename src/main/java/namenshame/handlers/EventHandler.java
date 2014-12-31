@@ -17,6 +17,5 @@ public class EventHandler
         {
             event.player.addChatComponentMessage(new ChatComponentText("\u00A7l" + entry.getKey() + " has registered " + entry.getValue() + " invalid recipe"+(entry.getValue()>1?"s":"")));
         }
-        FileIO.printFails(); // Prints a separate log with just NameNShame
     }
 }

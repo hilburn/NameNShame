@@ -3,8 +3,8 @@ package namenshame;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.ModMetadata;
+import cpw.mods.fml.common.event.FMLLoadCompleteEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
-import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.network.NetworkCheckHandler;
 import cpw.mods.fml.relauncher.Side;
 import namenshame.handlers.EventHandler;
@@ -33,5 +33,11 @@ public class NameNShame
     public final boolean networkCheck(Map<String, String> remoteVersions, Side side)
     {
         return true;
+    }
+
+    @Mod.EventHandler
+    public void loadComplete(FMLLoadCompleteEvent event)
+    {
+        FileIO.printFails(); // Prints a separate log with just NameNShame
     }
 }
