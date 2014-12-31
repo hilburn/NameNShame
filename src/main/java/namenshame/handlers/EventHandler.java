@@ -2,6 +2,7 @@ package namenshame.handlers;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent;
+import namenshame.FileIO;
 import namenshame.PrintFails;
 import net.minecraft.util.ChatComponentText;
 
@@ -16,5 +17,6 @@ public class EventHandler
         {
             event.player.addChatComponentMessage(new ChatComponentText("\u00A7l" + entry.getKey() + " has registered " + entry.getValue() + " invalid recipe"+(entry.getValue()>1?"s":"")));
         }
+        FileIO.printFails(); // Prints a separate log with just NameNShame
     }
 }
