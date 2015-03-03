@@ -1,19 +1,18 @@
 package namenshame.asm;
 
 import cpw.mods.fml.relauncher.IFMLLoadingPlugin;
-import net.minecraftforge.classloading.FMLForgePlugin;
 
 import java.util.Map;
 
 @IFMLLoadingPlugin.TransformerExclusions({"namenshame.asm."})
 public class LoadingPlugin implements IFMLLoadingPlugin
 {
-    public static boolean runtimeDeobfEnabled = FMLForgePlugin.RUNTIME_DEOBF;
+    public static boolean runtimeDeobfEnabled = false;
 
     @Override
     public String[] getASMTransformerClass()
     {
-        return new String[]{getAccessTransformerClass()};
+        return new String[]{"namenshame.asm.NameNShameTransformer"};
     }
 
     @Override
@@ -31,11 +30,12 @@ public class LoadingPlugin implements IFMLLoadingPlugin
     @Override
     public void injectData(Map<String, Object> data)
     {
+        runtimeDeobfEnabled = (Boolean) data.get("runtimeDeobfuscationEnabled");
     }
 
     @Override
     public String getAccessTransformerClass()
     {
-        return "namenshame.asm.NameNShameTransformer";
+        return null;
     }
 }

@@ -1,0 +1,6 @@
+package namenshame.registry;
+
+public enum FailTime
+{
+    UNKNOWN,PRE_INIT,INIT,POST_INIT,LOAD_COMPLETE,SERVER_STARTING,SERVER_START,RUNTIME
+}

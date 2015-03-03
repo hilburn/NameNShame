@@ -1,8 +1,12 @@
 package namenshame.asm;
 
 import net.minecraft.launchwrapper.IClassTransformer;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 
@@ -12,12 +16,15 @@ import java.util.Map;
 
 public class NameNShameTransformer implements IClassTransformer
 {
+    public static Logger log = LogManager.getLogger("NameNShame Transformer");
+
     private enum ClassName
     {
-        PRINT_FAILS("namenshame.PrintFails"),
-        GAME_REGISTRY("cpw.mods.fml.common.registry.GameRegistry", Method.RECIPE, Method.SHAPED_RECIPE, Method.SHAPELESS_RECIPE, Method.BLOCK_SMELTING, Method.ITEM_SMELTING, Method.STACK_SMELTING);
+        PRINT_FAILS("namenshame.FailHooks"),
+        ITEM_STACK("net.minecraft.item.ItemStack", "add", Method.ITEMSTACK_INIT);
 
         private String name;
+        private String obfName;
         private Method[] methods;
 
         ClassName(String name, Method... methods)
@@ -26,10 +33,16 @@ public class NameNShameTransformer implements IClassTransformer
             this.methods = methods;
         }
 
+        ClassName(String name, String obf, Method... methods)
+        {
+            this(name, methods);
+            this.obfName = obf;
+        }
+
 
         public String getName()
         {
-            return name;
+            return !LoadingPlugin.runtimeDeobfEnabled || obfName == null?name:obfName;
         }
 
         public String getASMName()
@@ -40,17 +53,12 @@ public class NameNShameTransformer implements IClassTransformer
 
     private enum Method
     {
-        RECIPE("addRecipe","(Lnet/minecraft/item/crafting/IRecipe;)V"),
-        SHAPED_RECIPE("addShapedRecipe","(Lnet/minecraft/item/ItemStack;[Ljava/lang/Object;)Lnet/minecraft/item/crafting/IRecipe"),
-        SHAPELESS_RECIPE("addShapelessRecipe","(Lnet/minecraft/item/ItemStack;[Ljava/lang/Object;)V"),
-        BLOCK_SMELTING("addSmelting","(Lnet/minecraft/block/Block;Lnet/minecraft/item/ItemStack;F)V"),
-        ITEM_SMELTING("addSmelting","(Lnet/minecraft/item/Item;Lnet/minecraft/item/ItemStack;F)V"),
-        STACK_SMELTING("addSmelting","(Lnet/minecraft/item/ItemStack;Lnet/minecraft/item/ItemStack;F)V"),
-        CHECK_FAIL("checkFail","");
-
+        ITEMSTACK_INIT("<init>","(Lnet/minecraft/item/Item;II)V","(Ladb;II)V");
 
         public String name;
+        public String obfName;
         public String args;
+        public String obfArgs;
         public InsnList instructions;
 
         Method(String name, String args)
@@ -58,40 +66,36 @@ public class NameNShameTransformer implements IClassTransformer
             this.name = name;
             this.args = args;
         }
+        Method(String name, String args, String obfArgs)
+        {
+            this(name, args);
+            this.obfArgs = obfArgs;
+        }
+
+
+        public String getName()
+        {
+            return !LoadingPlugin.runtimeDeobfEnabled || obfName == null?name:obfName;
+        }
+
+        public String getArgs()
+        {
+            return !LoadingPlugin.runtimeDeobfEnabled || obfArgs == null?args:obfArgs;
+        }
 
         static
         {
-            RECIPE.instructions = setRecipeInstructions();
-            SHAPED_RECIPE.instructions = setShapedInstructions();
-            SHAPELESS_RECIPE.instructions = setShapedInstructions();
-            BLOCK_SMELTING.instructions = setSmeltingInstructions(BLOCK_SMELTING);
-            ITEM_SMELTING.instructions = setSmeltingInstructions(ITEM_SMELTING);
-            STACK_SMELTING.instructions = setSmeltingInstructions(STACK_SMELTING);
+            ITEMSTACK_INIT.instructions = setItemStackInstructions();
         }
 
-        private static InsnList setSmeltingInstructions(Method method)
+        private static InsnList setItemStackInstructions()
         {
             InsnList instructions = new InsnList();
-            instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            LabelNode label = new LabelNode(new Label());
             instructions.add(new VarInsnNode(Opcodes.ALOAD, 1));
-            instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, ClassName.PRINT_FAILS.getASMName(), CHECK_FAIL.name, method.args.replace(";F",";")));
-            return instructions;
-        }
-
-        private static InsnList setShapedInstructions()
-        {
-            InsnList instructions = new InsnList();
-            instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
-            instructions.add(new VarInsnNode(Opcodes.ALOAD, 1));
-            instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, ClassName.PRINT_FAILS.getASMName(), CHECK_FAIL.name, SHAPELESS_RECIPE.args));
-            return instructions;
-        }
-
-        private static InsnList setRecipeInstructions()
-        {
-            InsnList instructions = new InsnList();
-            instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
-            instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, ClassName.PRINT_FAILS.getASMName(), CHECK_FAIL.name, RECIPE.args));
+            instructions.add(new JumpInsnNode(Opcodes.IFNONNULL,label));
+            instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, ClassName.PRINT_FAILS.getASMName(), "failedStack", "()V"));
+            instructions.add(label);
             return instructions;
         }
     }
@@ -100,7 +104,14 @@ public class NameNShameTransformer implements IClassTransformer
 
     static
     {
-        classMap.put(ClassName.GAME_REGISTRY.getName(),ClassName.GAME_REGISTRY);
+        //classMap.put(ClassName.GAME_REGISTRY.getName(),ClassName.GAME_REGISTRY);
+        classMap.put(ClassName.ITEM_STACK.name,ClassName.ITEM_STACK);
+        classMap.put(ClassName.ITEM_STACK.obfName,ClassName.ITEM_STACK);
+    }
+
+    public NameNShameTransformer()
+    {
+        log.log(Level.INFO, "Loading Name 'N' Shame Transformer");
     }
 
     @Override
@@ -109,15 +120,20 @@ public class NameNShameTransformer implements IClassTransformer
         ClassName clazz = classMap.get(className);
         if (clazz!=null)
         {
-            switch (clazz)
-            {
-                case GAME_REGISTRY:
-                    for (Method method:clazz.methods)
-                    {
-                        bytes = insertFirst(method,bytes);
-                    }
-                    break;
-            }
+//            switch (clazz)
+//            {
+//                case GAME_REGISTRY:
+//                    for (Method method:clazz.methods)
+//                    {
+//                        bytes = insertFirst(method,bytes);
+//                    }
+//                    break;
+                for (Method method:clazz.methods)
+                {
+                    bytes = insertFirst(method,bytes);
+                }
+//            }
+            classMap.clear();//(className);
         }
         return bytes;
     }
@@ -128,9 +144,10 @@ public class NameNShameTransformer implements IClassTransformer
         ClassReader classReader = new ClassReader(bytes);
         classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
 
-        MethodNode methodNode = getMethodByName(classNode,method.name,method.args);
+        MethodNode methodNode = getMethodByName(classNode,method.getName(),method.getArgs());
         if (methodNode!=null)
         {
+            log.log(Level.INFO,"Applying " + method.name() + " transformer");
             AbstractInsnNode pos = methodNode.instructions.getFirst();
             methodNode.instructions.insertBefore(pos,method.instructions);
         }
@@ -139,13 +156,12 @@ public class NameNShameTransformer implements IClassTransformer
         classNode.accept(writer);
         return writer.toByteArray();
     }
-
-
     public static MethodNode getMethodByName(ClassNode classNode, String name, String args) {
         List<MethodNode> methods = classNode.methods;
-        for (int k = 0; k < methods.size(); k++) {
-            MethodNode method = methods.get(k);
-            if (method.name.equals(name) && method.desc.equals(args)) {
+        for (MethodNode method : methods)
+        {
+            if (method.name.equals(name) && method.desc.equals(args))
+            {
                 return method;
             }
         }
