@@ -21,7 +21,7 @@ public class FailLogger
     public void logFail(FailPoint point)
     {
         failPoints.put(point.getFailTime(), point);
-        log.log(Level.WARN,getModName()+ " has created an invalid ItemStack");
+        log.log(Level.WARN,getModName()+ " has created an invalid ItemStack; "+point.getElement().toString());
     }
 
     public String getFailSummary()
