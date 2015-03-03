@@ -42,16 +42,15 @@ public class FailLogger
     {
         int fails = failPoints.size();
         String details = getModName()+ " has created " + fails + " invalid ItemStack" + (fails!=1?"s":"");
-        for (FailTime time : FailTime.values())
+        FailTime time = null;
+        for (FailPoint point : failPoints.values())
         {
-            if (failPoints.containsKey(time) && failPoints.get(time).size()>0)
+            if (time != point.getFailTime())
             {
-                details+="\n\t"+time.name();
-                for (FailPoint point : failPoints.get(time))
-                {
-                    details+="\n\t\t"+point.getElement().toString();
-                }
+                time = point.getFailTime();
+                details += "\n\t" + time.name();
             }
+            details+="\n\t\t"+point.getElement().toString();
         }
         return details;
     }
